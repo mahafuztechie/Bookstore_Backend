@@ -1,0 +1,135 @@
+﻿using CommonLayer;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using RepositoryLayer.Interface;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+
+namespace RepositoryLayer.Service
+{
+    public class UserRL: IUserRL
+    {
+
+        private SqlConnection sqlConnection;
+        private IConfiguration Configuration { get; }
+
+        public UserRL(IConfiguration configuration)
+        {
+            this.Configuration = configuration;
+        }
+
+
+        public UserModel UserRegister(UserModel user)
+        {
+            sqlConnection = new SqlConnection(this.Configuration["ConnectionString:BookStore"]);
+
+            try
+            {
+                using (sqlConnection)
+                {
+                    SqlCommand cmd = new SqlCommand("spRegisterUser", sqlConnection);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@FullName", user.Fullname);
+                    cmd.Parameters.AddWithValue("@Email", user.Email);
+                    cmd.Parameters.AddWithValue("@Password", user.Password);
+                    cmd.Parameters.AddWithValue("@MobileNumber", user.Mobile);
+                    sqlConnection.Open();
+                    int i = cmd.ExecuteNonQuery();
+                    sqlConnection.Close();
+                    if (i >= 1)
+                    {
+                        return user;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                sqlConnection.Close();
+            }
+        }
+
+        public string UserLogin(string email, string password)
+        {
+            sqlConnection = new SqlConnection(this.Configuration["ConnectionString:BookStore"]);
+            try
+            {
+                using (sqlConnection)
+                {
+                    UserModel model = new UserModel();
+
+                    SqlCommand command = new SqlCommand("spUserLogin", sqlConnection);
+
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@Email", email);
+                    command.Parameters.AddWithValue("@Password", password);
+                    sqlConnection.Open();
+                    SqlDataReader reader = command.ExecuteReader();
+                    if (reader.HasRows)
+                    {
+                        int UserId = 0;
+                        while (reader.Read())
+                        {
+                            model.Email = Convert.ToString(reader["Email"] == DBNull.Value ? default : reader["Email"]);
+                            UserId = Convert.ToInt32(reader["UserId"] == DBNull.Value ? default : reader["UserId"]);
+                            model.Password = Convert.ToString(reader["Password"] == DBNull.Value ? default : reader["Password"]);
+                        }
+                        sqlConnection.Close();
+                        var token = GenerateJWTToken(email, UserId);
+                        return token;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                sqlConnection.Close();
+            }
+
+        }
+
+        public string GenerateJWTToken(string email, int UserId)
+        {
+            // header
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.Configuration["Jwt:SecretKey"]));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            // payload
+            var claims = new[]
+            {
+                new Claim("Email", email),
+                new Claim("Id", UserId.ToString()),
+            };
+
+            // signature
+            var token = new JwtSecurityToken(
+                this.Configuration["Jwt:Issuer"],
+                this.Configuration["Jwt:Issuer"],
+                claims,
+                expires: DateTime.Now.AddMinutes(60),
+                signingCredentials: credentials);
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+       
+    }
+}
