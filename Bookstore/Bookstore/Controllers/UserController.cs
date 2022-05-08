@@ -1,6 +1,7 @@
 ﻿using BusinessLayer.Interface;
 using CommonLayer;
 using CommonLayer.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -53,6 +54,49 @@ namespace Bookstore.Controllers
                 else
                 {
                     return this.BadRequest(new { Success = false, message = " Unsuccessfull Login" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return this.BadRequest(new { Success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("ForgotPassword")]
+        public IActionResult ForgotPassword(ForgotPassModel FPModel)
+        {
+            try
+            {
+                var forgotPassword = this.userBL.ForgotPassword(FPModel.Email);
+                if (forgotPassword != null)
+                {
+                    return this.Ok(new { Success = true, message = " Mail sent To Email Check inbox", Response = forgotPassword });
+                }
+                else
+                {
+                    return this.BadRequest(new { Success = false, message = "Unsuccessfull To Add ForgotPassword" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return this.BadRequest(new { Success = false, message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPut("ResetPassword")]
+        public IActionResult ResetPassword(ResetPassModel RPModel)
+        {
+            try
+            {
+                var email = User.Claims.FirstOrDefault(e => e.Type == "Email").Value.ToString();
+                if (this.userBL.ResetPassword(email, RPModel.newPassword, RPModel.confirmPassword))
+                {
+                    return this.Ok(new { Success = true, message = "  Sucessfully Password Changed" });
+                }
+                else
+                {
+                    return this.BadRequest(new { Success = false, message = "  Please Try Again Later!!! " });
                 }
             }
             catch (Exception ex)

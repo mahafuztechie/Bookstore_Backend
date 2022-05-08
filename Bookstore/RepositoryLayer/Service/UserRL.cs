@@ -1,4 +1,5 @@
 ﻿using CommonLayer;
+using CommonLayer.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using RepositoryLayer.Interface;
@@ -130,6 +131,93 @@ namespace RepositoryLayer.Service
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+
+        public string ForgotPassword(string email)
+        {
+            sqlConnection = new SqlConnection(this.Configuration["ConnectionString:BookStore"]);
+            try
+            {
+                using (sqlConnection)
+                {
+                    UserModel model = new UserModel();
+                    SqlCommand command = new SqlCommand("spUserForgotPassword", sqlConnection);
+
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@Email", email);
+
+                    sqlConnection.Open();
+                    SqlDataReader reader = command.ExecuteReader();
+                    if (reader.HasRows)
+                    {
+                        int userId = 0;
+                        while (reader.Read())
+                        {
+                            email = Convert.ToString(reader["Email"] == DBNull.Value ? default : reader["Email"]);
+                            userId = Convert.ToInt32(reader["UserId"] == DBNull.Value ? default : reader["UserId"]);
+                        }
+                        sqlConnection.Close();
+                        var token = GenerateJWTToken(email, userId);
+                        new MSMQ().Sender(token);
+                        return token;
+                    }
+                    else
+                    {
+                        sqlConnection.Close();
+                        return null;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                sqlConnection.Close();
+            }
+        }
        
+
+
+        public bool ResetPassword(string email, string newPassword, string confirmPassword)
+        {
+            try
+            {
+                if (newPassword == confirmPassword)
+                {
+                    sqlConnection = new SqlConnection(this.Configuration["ConnectionString:BookStore"]);
+                    using (sqlConnection)
+                    {
+                        SqlCommand command = new SqlCommand("spUserResetPassword", sqlConnection);
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@Email", email);
+                        command.Parameters.AddWithValue("@Password", confirmPassword);
+                        sqlConnection.Open();
+                        int i = command.ExecuteNonQuery();
+                        sqlConnection.Close();
+                        if (i >= 1)
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                sqlConnection.Close();
+            }
+        }
     }
 }

@@ -89,6 +89,7 @@ namespace Bookstore
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -102,6 +103,9 @@ namespace Bookstore
                     endpoints.MapControllers();
                 });
         }
+
+
+
     }
 
 }
