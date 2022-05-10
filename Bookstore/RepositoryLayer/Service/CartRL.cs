@@ -53,6 +53,79 @@ namespace RepositoryLayer.Service
                 sqlConnection.Close();
             }
         }
+
+        //Update cart
+        public CartModel UpdateCart(int cartId, CartModel cartModel, int userId)
+        {
+            sqlConnection = new SqlConnection(this.Configuration["ConnectionString:BookStore"]);
+            try
+            {
+                using (sqlConnection)
+                {
+                    SqlCommand cmd = new SqlCommand("UpdateCart", sqlConnection);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@OrderQuantity", cartModel.orderQuantity);
+                    cmd.Parameters.AddWithValue("@BookId", cartModel.bookId);
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    cmd.Parameters.AddWithValue("@CartId", cartId);
+                    sqlConnection.Open();
+                    int i = cmd.ExecuteNonQuery();
+                    sqlConnection.Close();
+                    if (i >= 1)
+                    {
+                        return cartModel;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                sqlConnection.Close();
+            }
+        }
+        //delete cart
+
+        public bool DeleteCart(int cartId, int userId)
+        {
+            sqlConnection = new SqlConnection(this.Configuration["ConnectionString:BookStore"]);
+
+            try
+            {
+                using (sqlConnection)
+                {
+                    SqlCommand cmd = new SqlCommand("DeleteCart", sqlConnection);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@CartId", cartId);
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    sqlConnection.Open();
+                    int i = cmd.ExecuteNonQuery();
+                    sqlConnection.Close();
+                    if (i >= 1)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                sqlConnection.Close();
+            }
+        }
         //get cart by userid and cartid 
         public List<ViewCartModel> GetCartDetailsByUserid(int userId)
         {
