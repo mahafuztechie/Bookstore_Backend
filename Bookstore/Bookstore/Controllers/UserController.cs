@@ -28,11 +28,11 @@ namespace Bookstore.Controllers
                 var user = this.userBL.UserRegister(userModel);
                 if (user != null)
                 {
-                    return this.Ok(new { Success = true, message = " Sucessfull User Registration", Response = user });
+                    return this.Ok(new { Success = true, message = "user registered successfully", Response = user });
                 }
                 else
                 {
-                    return this.BadRequest(new { Success = false, message = " Unsuccessfull User Registration Failed" });
+                    return this.BadRequest(new { Success = false, message = "User Registration Failed" });
                 }
             }
             catch (Exception ex)
